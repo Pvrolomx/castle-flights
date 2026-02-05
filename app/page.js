@@ -329,26 +329,24 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen">
-      {/* Header */}
+      {/* Logo */}
+      <div className="bg-castle-sand pt-6 pb-4 text-center">
+        <img src="/logo.png" alt="Castle Solutions" className="h-20 md:h-24 mx-auto mb-2" />
+        <div className="flex justify-center">
+          <button
+            onClick={() => setLang(lang === 'es' ? 'en' : 'es')}
+            className="text-lg hover:scale-110 transition-transform"
+          >
+            {lang === 'es' ? '🇲🇽' : '🇺🇸'}
+          </button>
+        </div>
+      </div>
+
+      {/* Banner */}
       <header className="bg-castle-dark text-white">
-        <div className="max-w-2xl mx-auto px-4 py-5">
-          <div className="flex items-center justify-between mb-1">
-            <div className="flex items-center gap-3">
-              <img src="/logo.png" alt="Castle Solutions" className="h-10 w-10 rounded-lg" />
-              <div>
-                <h1 className="text-xl font-bold font-serif tracking-wide">Castle Flights</h1>
-                <p className="text-xs text-gray-400">{t.subtitle}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setLang(lang === 'es' ? 'en' : 'es')}
-                className="text-lg hover:scale-110 transition-transform"
-              >
-                {lang === 'es' ? '🇲🇽' : '🇺🇸'}
-              </button>
-            </div>
-          </div>
+        <div className="max-w-2xl mx-auto px-4 py-4 text-center">
+          <h1 className="text-2xl font-bold font-serif tracking-wide">✈️ Castle Flights</h1>
+          <p className="text-xs text-gray-400 mt-1">{t.subtitle}</p>
         </div>
       </header>
 
