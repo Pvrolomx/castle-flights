@@ -334,7 +334,7 @@ export default function HomePage() {
         <div className="max-w-2xl mx-auto px-4 py-5">
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-3">
-              <span className="text-3xl">✈️</span>
+              <img src="/logo.png" alt="Castle Solutions" className="h-10 w-10 rounded-lg" />
               <div>
                 <h1 className="text-xl font-bold font-serif tracking-wide">Castle Flights</h1>
                 <p className="text-xs text-gray-400">{t.subtitle}</p>
@@ -490,9 +490,12 @@ export default function HomePage() {
       </main>
 
       {/* Footer */}
-      <footer className="py-6 text-center text-xs text-gray-400">
-        <p>{t.poweredBy} AviationStack + FlightAware</p>
-        <p className="mt-1">{t.madeWith} ❤️ {t.by} <span className="text-castle-gold">CD29</span> — Colmena 2026</p>
+      <footer className="py-8 text-center">
+        <img src="/logo.png" alt="Castle Solutions" className="h-8 mx-auto mb-3 opacity-40" />
+        <p className="text-xs text-gray-400">{t.poweredBy} AviationStack + FlightAware</p>
+        <p className="text-xs text-gray-400 mt-1">
+          {t.madeWith} ❤️ {t.by} <span className="text-castle-gold font-medium">duendes.app</span> — 2026
+        </p>
       </footer>
     </div>
   )
