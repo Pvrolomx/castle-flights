@@ -301,7 +301,7 @@ export default function HomePage() {
       setError(t.notFound)
     }
     setLoading(false)
-  }, [query, source, t.notFound])
+  }, [query, t.notFound])
 
   useEffect(() => {
     if (!autoRefresh || !flight) return
