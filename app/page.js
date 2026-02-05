@@ -280,7 +280,6 @@ export default function HomePage() {
   const [arrivals, setArrivals] = useState(null)
   const [arrivalsLoading, setArrivalsLoading] = useState(false)
   
-
   const t = TEXTS[lang]
 
   const searchFlight = useCallback(async (flightNum) => {
@@ -302,7 +301,7 @@ export default function HomePage() {
       setError(t.notFound)
     }
     setLoading(false)
-  }, [query, t.notFound])
+  }, [query, source, t.notFound])
 
   useEffect(() => {
     if (!autoRefresh || !flight) return
@@ -391,12 +390,14 @@ export default function HomePage() {
               </div>
 
               {/* Auto-refresh */}
-              <div className="flex items-center justify-end mt-3">
+              {flight && (
+                <div className="flex items-center justify-end mt-3">
+                  <label className="flex items-center gap-1.5 text-sm text-gray-500 cursor-pointer">
                     <input type="checkbox" checked={autoRefresh} onChange={e => setAutoRefresh(e.target.checked)} className="accent-castle-gold" />
                     {t.autoRefresh}
                   </label>
-                )}
-              </div>
+                </div>
+              )}
             </form>
 
             {error && (
