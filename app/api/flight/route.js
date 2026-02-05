@@ -3,21 +3,31 @@ import { NextResponse } from 'next/server'
 const AVIATIONSTACK_KEY = process.env.AVIATIONSTACK_KEY
 const FLIGHTAWARE_KEY = process.env.FLIGHTAWARE_KEY
 
-function normalizeStatus(status) {
+function normalizeStatus(status, depDelay, arrDelay) {
   if (!status) return 'unknown'
   const s = status.toLowerCase()
+  // Check delay first — some APIs say "scheduled" even when delayed
+  if ((depDelay && depDelay > 15) || s.includes('delay') || s.includes('departing late') || s.includes('late')) return 'delayed'
   if (s.includes('sched')) return 'scheduled'
   if (s.includes('active') || s.includes('en-route') || s.includes('en route') || s.includes('airborne')) return 'active'
   if (s.includes('land')) return 'landed'
   if (s.includes('cancel')) return 'cancelled'
   if (s.includes('divert')) return 'diverted'
-  if (s.includes('delay')) return 'delayed'
   return s
+}
+
+function calcDelay(scheduled, estimated) {
+  if (!scheduled || !estimated) return 0
+  const schedTime = new Date(scheduled).getTime()
+  const estTime = new Date(estimated).getTime()
+  if (isNaN(schedTime) || isNaN(estTime)) return 0
+  const diffMin = Math.round((estTime - schedTime) / 60000)
+  return diffMin > 0 ? diffMin : 0
 }
 
 function calcProgress(dep, arr, status) {
   if (status === 'landed') return 100
-  if (status === 'scheduled') return 0
+  if (status === 'scheduled' || status === 'delayed') return 0
   if (status === 'cancelled') return 0
   if (!dep || !arr) return 50
   const now = Date.now()
@@ -28,14 +38,42 @@ function calcProgress(dep, arr, status) {
   return Math.max(0, Math.min(99, Math.round(progress)))
 }
 
+function getTodayRange() {
+  const now = new Date()
+  const start = new Date(now)
+  start.setHours(0, 0, 0, 0)
+  const end = new Date(now)
+  end.setHours(23, 59, 59, 999)
+  return { start, end }
+}
+
+function isToday(dateStr) {
+  if (!dateStr) return false
+  const d = new Date(dateStr)
+  const { start, end } = getTodayRange()
+  // Allow window: yesterday 6pm to tomorrow 6am for timezone flexibility
+  const flexStart = new Date(start.getTime() - 6 * 3600000)
+  const flexEnd = new Date(end.getTime() + 6 * 3600000)
+  return d >= flexStart && d <= flexEnd
+}
+
 async function fetchAviationStack(flightIata) {
   try {
-    const url = `https://api.aviationstack.com/v1/flights?access_key=${AVIATIONSTACK_KEY}&flight_iata=${flightIata}&limit=1`
-    const res = await fetch(url, { next: { revalidate: 120 } })
+    const url = `https://api.aviationstack.com/v1/flights?access_key=${AVIATIONSTACK_KEY}&flight_iata=${flightIata}&limit=5`
+    const res = await fetch(url, { next: { revalidate: 60 } })
     const data = await res.json()
-    if (!data.data || !data.data[0]) return null
-    const f = data.data[0]
-    const status = normalizeStatus(f.flight_status)
+    if (!data.data || !data.data.length) return null
+    
+    // Prefer today's flight
+    const todayFlight = data.data.find(f => isToday(f.departure?.scheduled)) || data.data[0]
+    const f = todayFlight
+    
+    // Calculate delay from estimated vs scheduled if API doesn't report it
+    const depDelay = f.departure?.delay || calcDelay(f.departure?.scheduled, f.departure?.estimated)
+    const arrDelay = f.arrival?.delay || calcDelay(f.arrival?.scheduled, f.arrival?.estimated)
+    
+    const status = normalizeStatus(f.flight_status, depDelay, arrDelay)
+    
     return {
       source: 'aviationstack',
       flight: f.flight?.iata || flightIata,
@@ -46,21 +84,21 @@ async function fetchAviationStack(flightIata) {
         airport: f.departure?.airport || '',
         iata: f.departure?.iata || '',
         scheduled: f.departure?.scheduled || null,
-        estimated: f.departure?.estimated || null,
+        estimated: f.departure?.estimated || f.departure?.scheduled || null,
         actual: f.departure?.actual || null,
         terminal: f.departure?.terminal || null,
         gate: f.departure?.gate || null,
-        delay: f.departure?.delay || 0,
+        delay: depDelay,
       },
       arrival: {
         airport: f.arrival?.airport || '',
         iata: f.arrival?.iata || '',
         scheduled: f.arrival?.scheduled || null,
-        estimated: f.arrival?.estimated || null,
+        estimated: f.arrival?.estimated || f.arrival?.scheduled || null,
         actual: f.arrival?.actual || null,
         terminal: f.arrival?.terminal || null,
         gate: f.arrival?.gate || null,
-        delay: f.arrival?.delay || 0,
+        delay: arrDelay,
         baggage: f.arrival?.baggage || null,
       },
       progress: calcProgress(
@@ -83,12 +121,23 @@ async function fetchFlightAware(flightId) {
     const url = `https://aeroapi.flightaware.com/aeroapi/flights/${ident}`
     const res = await fetch(url, {
       headers: { 'x-apikey': FLIGHTAWARE_KEY },
-      next: { revalidate: 120 },
+      next: { revalidate: 60 },
     })
     const data = await res.json()
-    if (!data.flights || !data.flights[0]) return null
-    const f = data.flights[0]
-    const status = normalizeStatus(f.status)
+    if (!data.flights || !data.flights.length) return null
+    
+    // Find today's flight — prefer active/delayed over scheduled
+    const todayFlights = data.flights.filter(f => isToday(f.scheduled_out || f.scheduled_off))
+    const f = todayFlights.find(fl => {
+      const s = (fl.status || '').toLowerCase()
+      return s.includes('active') || s.includes('en route') || s.includes('delay') || s.includes('late')
+    }) || todayFlights[0] || data.flights[0]
+    
+    const depDelay = f.departure_delay || calcDelay(f.scheduled_out, f.estimated_out)
+    const arrDelay = f.arrival_delay || calcDelay(f.scheduled_in, f.estimated_in)
+    
+    const status = normalizeStatus(f.status, depDelay, arrDelay)
+    
     return {
       source: 'flightaware',
       flight: f.ident || flightId,
@@ -99,17 +148,17 @@ async function fetchFlightAware(flightId) {
         airport: f.origin?.name || '',
         iata: f.origin?.code_iata || f.origin?.code || '',
         scheduled: f.scheduled_out || null,
-        estimated: f.estimated_out || null,
+        estimated: f.estimated_out || f.scheduled_out || null,
         actual: f.actual_out || null,
         terminal: f.terminal_origin || null,
         gate: f.gate_origin || null,
-        delay: f.departure_delay || 0,
+        delay: depDelay,
       },
       arrival: {
         airport: f.destination?.name || '',
         iata: f.destination?.code_iata || f.destination?.code || '',
         scheduled: f.scheduled_in || null,
-        estimated: f.estimated_in || null,
+        estimated: f.estimated_in || f.scheduled_in || null,
         actual: f.actual_in || null,
         terminal: f.terminal_destination || null,
         gate: f.gate_destination || null,
