@@ -279,7 +279,7 @@ export default function HomePage() {
   const [autoRefresh, setAutoRefresh] = useState(false)
   const [arrivals, setArrivals] = useState(null)
   const [arrivalsLoading, setArrivalsLoading] = useState(false)
-  const [source, setSource] = useState('aviationstack')
+  
 
   const t = TEXTS[lang]
 
@@ -289,7 +289,7 @@ export default function HomePage() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch(`/api/flight?flight=${q}&source=${source}`)
+      const res = await fetch(`/api/flight?flight=${q}`)
       if (!res.ok) {
         setFlight(null)
         setError(t.notFound)
@@ -302,7 +302,7 @@ export default function HomePage() {
       setError(t.notFound)
     }
     setLoading(false)
-  }, [query, source, t.notFound])
+  }, [query, t.notFound])
 
   useEffect(() => {
     if (!autoRefresh || !flight) return
@@ -390,20 +390,8 @@ export default function HomePage() {
                 </button>
               </div>
 
-              {/* Source toggle */}
-              <div className="flex items-center justify-between mt-3">
-                <div className="flex items-center gap-3 text-sm text-gray-500">
-                  <label className="flex items-center gap-1.5 cursor-pointer">
-                    <input type="radio" name="source" value="aviationstack" checked={source === 'aviationstack'} onChange={() => setSource('aviationstack')} className="accent-castle-gold" />
-                    AviationStack
-                  </label>
-                  <label className="flex items-center gap-1.5 cursor-pointer">
-                    <input type="radio" name="source" value="flightaware" checked={source === 'flightaware'} onChange={() => setSource('flightaware')} className="accent-castle-gold" />
-                    FlightAware
-                  </label>
-                </div>
-                {flight && (
-                  <label className="flex items-center gap-1.5 text-sm text-gray-500 cursor-pointer">
+              {/* Auto-refresh */}
+              <div className="flex items-center justify-end mt-3">
                     <input type="checkbox" checked={autoRefresh} onChange={e => setAutoRefresh(e.target.checked)} className="accent-castle-gold" />
                     {t.autoRefresh}
                   </label>
@@ -490,7 +478,7 @@ export default function HomePage() {
       {/* Footer */}
       <footer className="py-8 text-center">
         <img src="/logo.png" alt="Castle Solutions" className="h-8 mx-auto mb-3 opacity-40" />
-        <p className="text-xs text-gray-400">{t.poweredBy} AviationStack + FlightAware</p>
+        <p className="text-xs text-gray-400">{t.poweredBy} FlightAware</p>
         <p className="text-xs text-gray-400 mt-1">
           {t.madeWith} ❤️ {t.by} <span className="text-castle-gold font-medium">duendes.app</span> — 2026
         </p>
