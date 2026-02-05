@@ -1,0 +1,66 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&display=swap');
+
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  background: #F5F0EB;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+  opacity: 0;
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(0.8); opacity: 1; }
+  100% { transform: scale(2); opacity: 0; }
+}
+
+.pulse-dot {
+  position: relative;
+}
+
+.pulse-dot::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  animation: pulse-ring 1.5s ease-out infinite;
+}
+
+@keyframes plane-move {
+  0% { transform: translateX(0%); }
+  100% { transform: translateX(100%); }
+}
+
+.plane-track {
+  position: relative;
+  height: 4px;
+  background: linear-gradient(90deg, #C4A265 var(--progress), #e5e7eb var(--progress));
+  border-radius: 2px;
+}
+
+.plane-icon {
+  position: absolute;
+  top: 50%;
+  left: var(--progress);
+  transform: translate(-50%, -50%);
+  transition: left 1s ease;
+}
+
+/* Status colors */
+.status-scheduled { color: #6366f1; background: #eef2ff; }
+.status-active { color: #059669; background: #ecfdf5; }
+.status-landed { color: #0284c7; background: #f0f9ff; }
+.status-cancelled { color: #dc2626; background: #fef2f2; }
+.status-diverted { color: #d97706; background: #fffbeb; }
+.status-delayed { color: #ea580c; background: #fff7ed; }
