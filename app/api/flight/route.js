@@ -192,45 +192,21 @@ export async function GET(request) {
 
   const cleanFlight = flight.replace(/\s/g, '').toUpperCase()
 
-  // If specific source requested, use that with fallback
-  if (source === 'flightaware') {
-    const result = await fetchFlightAware(cleanFlight) || await fetchAviationStack(cleanFlight)
-    if (!result) return NextResponse.json({ error: 'Flight not found', flight: cleanFlight }, { status: 404 })
-    return NextResponse.json(result)
-  }
+  let result = null
+
   if (source === 'aviationstack') {
-    const result = await fetchAviationStack(cleanFlight) || await fetchFlightAware(cleanFlight)
-    if (!result) return NextResponse.json({ error: 'Flight not found', flight: cleanFlight }, { status: 404 })
-    return NextResponse.json(result)
+    // Only use AviationStack if explicitly requested
+    result = await fetchAviationStack(cleanFlight)
+    if (!result) result = await fetchFlightAware(cleanFlight)
+  } else {
+    // Default: FlightAware first (most accurate), AviationStack as fallback
+    result = await fetchFlightAware(cleanFlight)
+    if (!result) result = await fetchAviationStack(cleanFlight)
   }
 
-  // Default: query BOTH sources in parallel, pick the one with more info
-  const [asResult, faResult] = await Promise.all([
-    fetchAviationStack(cleanFlight),
-    fetchFlightAware(cleanFlight),
-  ])
-
-  if (!asResult && !faResult) {
+  if (!result) {
     return NextResponse.json({ error: 'Flight not found', flight: cleanFlight }, { status: 404 })
   }
 
-  // Score each result — prefer the one with delay info, live data, actual times
-  function score(r) {
-    if (!r) return -1
-    let s = 0
-    if (r.status === 'delayed' || r.status === 'active') s += 10
-    if (r.departure.delay > 0) s += 5
-    if (r.departure.actual) s += 3
-    if (r.departure.estimated && r.departure.estimated !== r.departure.scheduled) s += 3
-    if (r.arrival.estimated && r.arrival.estimated !== r.arrival.scheduled) s += 3
-    if (r.live) s += 5
-    if (r.departure.gate) s += 1
-    if (r.departure.terminal) s += 1
-    if (r.arrival.terminal) s += 1
-    if (r.arrival.baggage) s += 1
-    return s
-  }
-
-  const result = score(faResult) >= score(asResult) ? faResult : asResult
   return NextResponse.json(result)
 }
