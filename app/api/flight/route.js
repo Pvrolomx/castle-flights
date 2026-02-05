@@ -133,8 +133,10 @@ async function fetchFlightAware(flightId) {
       return s.includes('active') || s.includes('en route') || s.includes('delay') || s.includes('late')
     }) || todayFlights[0] || data.flights[0]
     
-    const depDelay = f.departure_delay || calcDelay(f.scheduled_out, f.estimated_out)
-    const arrDelay = f.arrival_delay || calcDelay(f.scheduled_in, f.estimated_in)
+    const depDelayRaw = f.departure_delay ? Math.round(f.departure_delay / 60) : 0
+    const depDelay = depDelayRaw || calcDelay(f.scheduled_out, f.estimated_out)
+    const arrDelayRaw = f.arrival_delay ? Math.round(f.arrival_delay / 60) : 0
+    const arrDelay = arrDelayRaw || calcDelay(f.scheduled_in, f.estimated_in)
     
     const status = normalizeStatus(f.status, depDelay, arrDelay)
     
@@ -162,7 +164,7 @@ async function fetchFlightAware(flightId) {
         actual: f.actual_in || null,
         terminal: f.terminal_destination || null,
         gate: f.gate_destination || null,
-        delay: f.arrival_delay || 0,
+        delay: arrDelay,
         baggage: f.baggage_claim || null,
       },
       progress: calcProgress(
